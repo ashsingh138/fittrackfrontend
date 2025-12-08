@@ -17,25 +17,43 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Register
+  // ... inside AuthProvider
+
   const signup = async (userData) => {
+    console.log("1. Sending Signup Data:", userData);
+
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
-      const data = await res.json();
 
-      if (!res.ok) throw new Error(data.message);
+      // KEY CHANGE: Read text first, then parse JSON
+      const responseText = await res.text(); 
+      console.log("2. Raw Server Response:", responseText); // <--- CHECK THIS IN CONSOLE
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (err) {
+        throw new Error(`Server didn't send JSON! It sent: ${responseText}`);
+      }
+
+      if (!res.ok) throw new Error(data.message || "Registration failed");
 
       // Save user & token
       localStorage.setItem('fittrack_user', JSON.stringify(data));
       setUser(data);
       return { success: true };
+
     } catch (error) {
+      console.error("Signup Logic Error:", error);
       return { success: false, message: error.message };
     }
   };
+
+  // ... keep the rest the same
 
   // Login
   const login = async (email, password) => {
