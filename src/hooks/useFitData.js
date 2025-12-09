@@ -96,23 +96,45 @@ export function useFitData() {
   const addWorkout = async (entry) => {
     const saved = await postData('workouts', entry);
     if (saved) {
-      setData(prev => ({
-        ...prev,
-        workouts: [saved, ...prev.workouts]
-      }));
+      setData(prev => {
+        // Check if we already have a log for this date
+        const existingIndex = prev.workouts.findIndex(w => w.date === saved.date);
+        
+        let newList;
+        if (existingIndex >= 0) {
+          // UPDATE: Replace old entry
+          newList = [...prev.workouts];
+          newList[existingIndex] = saved;
+        } else {
+          // CREATE: Add to top
+          newList = [saved, ...prev.workouts];
+        }
+        return { ...prev, workouts: newList };
+      });
     }
   };
 
   const addDiet = async (entry) => {
     const saved = await postData('diet', entry);
     if (saved) {
-      setData(prev => ({
-        ...prev,
-        diet: [saved, ...prev.diet]
-      }));
+      setData(prev => {
+        // Check if we already have a log for this date
+        const existingIndex = prev.diet.findIndex(d => d.date === saved.date);
+        
+        let newDietList;
+        if (existingIndex >= 0) {
+          // UPDATE: Replace the old entry with the new one
+          newDietList = [...prev.diet];
+          newDietList[existingIndex] = saved;
+        } else {
+          // CREATE: Add to the top
+          newDietList = [saved, ...prev.diet];
+        }
+        
+        return { ...prev, diet: newDietList };
+      });
     }
   };
-
   // Update Settings (Target Date, Weights, etc.)
   const updateSettings = async (newSettings) => {
     const updatedSettings = { ...data.settings, ...newSettings };
