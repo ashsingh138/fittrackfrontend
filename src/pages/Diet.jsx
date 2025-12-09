@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Droplets, Utensils, Save, Calendar, X, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Droplets, Utensils, Save, Calendar, X, Edit2, AlertCircle } from 'lucide-react';
 
-// --- MEAL SECTION COMPONENT (No Changes Needed) ---
+// --- MEAL SECTION COMPONENT ---
 const MealSection = ({ title, items, onAdd, onDelete }) => {
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
@@ -63,7 +63,8 @@ const MealSection = ({ title, items, onAdd, onDelete }) => {
 
 // --- MAIN DIET COMPONENT ---
 export default function Diet({ data, onAdd, onDeleteLog }) {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const today = new Date().toISOString().split('T')[0];
+  const [date, setDate] = useState(today);
   const [meals, setMeals] = useState({ breakfast: [], lunch: [], snacks: [], dinner: [], junk: [] });
   const [eggs, setEggs] = useState(0);
   const [water, setWater] = useState(0);
@@ -72,12 +73,7 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
 
   // Sync state when Date changes OR when Data updates
   useEffect(() => {
-    loadDataForDate(date);
-  }, [date, data]);
-
-  // Helper to load data into the form
-  const loadDataForDate = (targetDate) => {
-    const existingLog = data.find(d => d.date === targetDate);
+    const existingLog = data.find(d => d.date === date);
     if (existingLog) {
       setMeals({
         breakfast: existingLog.meals?.breakfast || [],
@@ -93,7 +89,7 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
       setEggs(0);
       setWater(0);
     }
-  };
+  }, [date, data]);
 
   const addItem = (section, item) => {
     setMeals(prev => ({ ...prev, [section]: [...prev[section], item] }));
@@ -115,7 +111,7 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
   };
 
   const handleDeleteFullLog = async (logDate) => {
-    if (window.confirm("Are you sure you want to delete the entire log for " + logDate + "?")) {
+    if (window.confirm("Delete entire log for " + logDate + "?")) {
       await onDeleteLog(logDate);
       if (logDate === date) {
          setMeals({ breakfast: [], lunch: [], snacks: [], dinner: [], junk: [] });
@@ -125,15 +121,28 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
     }
   };
 
-  // NEW: Force load data when clicking "Edit"
-  const handleEditClick = (log) => {
-    setDate(log.date);      // Update the date picker
-    loadDataForDate(log.date); // Manually load data immediately
-    setIsHistoryOpen(false); // Close modal
+  // --- EDIT LOGIC ---
+  const handleEditDate = (logDate) => {
+    setDate(logDate);      // 1. Switch the date picker
+    setIsHistoryOpen(false); // 2. Close modal
+    // 3. The useEffect above will automatically load the data for this date
   };
 
   return (
-    <div className="relative">
+    <div className="relative pb-20">
+      
+      {/* EDIT MODE WARNING BANNER */}
+      {date !== today && (
+        <div className="bg-blue-600 text-white px-4 py-2 rounded-t-xl md:rounded-xl mb-4 flex justify-between items-center shadow-md animate-pulse">
+           <div className="flex items-center gap-2 font-bold text-sm">
+             <Edit2 size={16} /> Editing Log for: {date}
+           </div>
+           <button onClick={() => setDate(today)} className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded transition-colors">
+             Back to Today
+           </button>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6 gap-4">
         <div className="flex items-center gap-3">
@@ -168,7 +177,7 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
          <MealSection title="⚠️ Junk / Cheat Meals" items={meals.junk} onAdd={(i) => addItem('junk', i)} onDelete={(i) => removeItem('junk', i)} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-20">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col items-center justify-center">
               <label className="text-gray-500 dark:text-gray-400 mb-2 font-medium">Total Eggs</label>
               <div className="flex items-center gap-4">
@@ -187,55 +196,83 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
           </button>
       </div>
 
-      {/* --- HISTORY MODAL --- */}
+      {/* --- HISTORY MODAL (Redesigned) --- */}
       {isHistoryOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 w-full max-w-lg max-h-[80vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-xl max-h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
             <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
               <h3 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
-                <Calendar size={20} className="text-blue-500"/> Past Logs
+                <Calendar size={20} className="text-blue-500"/> History Log
               </h3>
               <button onClick={() => setIsHistoryOpen(false)} className="text-gray-500 hover:text-red-500 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                 <X size={20} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {data.length === 0 ? <div className="text-center text-gray-500 py-10">No logs found.</div> : (
                 [...data].sort((a,b) => new Date(b.date) - new Date(a.date)).map(log => {
-                  // FIX 1: Use _id from MongoDB, fallback to id
                   const logId = log._id || log.id; 
                   return (
-                    <div key={logId} className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-blue-500 cursor-pointer transition-all bg-white dark:bg-gray-800 shadow-sm"
-                         onClick={() => setSelectedLog(selectedLog === logId ? null : logId)}>
-                      <div className="flex justify-between items-center">
-                        <div className="font-bold text-gray-800 dark:text-gray-200">{log.date}</div>
+                    <div key={logId} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm transition-all hover:shadow-md">
+                      
+                      {/* Log Header - Click to Toggle */}
+                      <div 
+                        className="p-4 flex justify-between items-center cursor-pointer bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                        onClick={() => setSelectedLog(selectedLog === logId ? null : logId)}
+                      >
+                        <div className="font-bold text-gray-800 dark:text-gray-200 text-lg">{log.date}</div>
                         <div className="flex gap-2 text-xs">
-                          <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md font-medium">{log.water}L 💧</span>
+                           {log.water > 0 && <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-md">{log.water}L</span>}
+                           {log.eggs > 0 && <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-md">{log.eggs}🥚</span>}
                         </div>
                       </div>
 
+                      {/* Log Details - Expanded */}
                       {selectedLog === logId && (
-                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 text-sm space-y-3" onClick={e => e.stopPropagation()}>
-                           <div className="grid grid-cols-1 gap-1 text-gray-600 dark:text-gray-400">
-                             {log.meals?.breakfast?.length > 0 && <p>🍳 Breakfast: {log.meals.breakfast.map(i => i.name).join(', ')}</p>}
-                             {log.meals?.lunch?.length > 0 && <p>🥗 Lunch: {log.meals.lunch.map(i => i.name).join(', ')}</p>}
-                           </div>
+                        <div className="p-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
+                           
+                           {/* Sections with Specific Edit Buttons */}
+                           {[
+                             { label: "Breakfast", data: log.meals?.breakfast },
+                             { label: "Lunch", data: log.meals?.lunch },
+                             { label: "Dinner", data: log.meals?.dinner },
+                             { label: "Snacks", data: log.meals?.snacks },
+                             { label: "Junk", data: log.meals?.junk, color: "text-red-500" }
+                           ].map((section) => (
+                             section.data && section.data.length > 0 && (
+                               <div key={section.label} className="border-b border-gray-100 dark:border-gray-700 pb-2 last:border-0">
+                                 <div className="flex justify-between items-start mb-1">
+                                   <span className={`text-xs font-bold uppercase ${section.color || 'text-gray-500 dark:text-gray-400'}`}>{section.label}</span>
+                                   <button 
+                                     onClick={() => handleEditDate(log.date)}
+                                     className="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1 font-medium"
+                                   >
+                                     <Edit2 size={12}/> Edit
+                                   </button>
+                                 </div>
+                                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                   {section.data.map(i => `${i.name} (${i.qty}${i.unit || ''})`).join(', ')}
+                                 </p>
+                               </div>
+                             )
+                           ))}
 
-                          <div className="grid grid-cols-2 gap-2 mt-4">
-                            <button 
-                              className="flex items-center justify-center gap-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-bold py-2 rounded border border-blue-200 dark:border-blue-800"
-                              onClick={() => handleEditClick(log)}
-                            >
-                              <Edit2 size={14}/> Edit
-                            </button>
-                            <button 
-                              className="flex items-center justify-center gap-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 font-bold py-2 rounded border border-red-200 dark:border-red-800"
-                              onClick={() => handleDeleteFullLog(log.date)}
-                            >
-                              <Trash2 size={14}/> Delete Day
-                            </button>
-                          </div>
+                           {/* Global Actions */}
+                           <div className="pt-2 flex justify-end gap-3">
+                              <button 
+                                onClick={() => handleEditDate(log.date)}
+                                className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg text-sm font-bold"
+                              >
+                                <Edit2 size={16}/> Edit Full Day
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteFullLog(log.date)}
+                                className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg text-sm font-bold"
+                              >
+                                <Trash2 size={16}/> Delete
+                              </button>
+                           </div>
                         </div>
                       )}
                     </div>
@@ -246,6 +283,7 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
           </div>
         </div>
       )}
+
     </div>
   );
 }
