@@ -23,7 +23,8 @@ const ProtectedRoute = ({ children }) => {
 
 // Wrapper for data hook access (Inner App)
 const FitTrackApp = () => {
-  const { data, addMeasurement, addWorkout, addDiet, addPhoto, deletePhoto, updateSettings } = useFitData();
+  const { data, addMeasurement, addWorkout, addDiet, addPhoto, deletePhoto, updateSettings, deleteDietLog,    // <--- NEW
+    deleteWorkoutLog,  } = useFitData();
 
   return (
     <Routes>
@@ -34,8 +35,8 @@ const FitTrackApp = () => {
       {/* Protected Routes (Has Sidebar) */}
       <Route path="/" element={<ProtectedRoute><Dashboard data={data} /></ProtectedRoute>} />
       <Route path="/measurements" element={<ProtectedRoute><Measurements data={data.measurements} onAdd={addMeasurement} /></ProtectedRoute>} />
-      <Route path="/workouts" element={<ProtectedRoute><Workouts data={data.workouts} onAdd={addWorkout} /></ProtectedRoute>} />
-      <Route path="/diet" element={<ProtectedRoute><Diet data={data.diet} onAdd={addDiet} /></ProtectedRoute>} />
+      <Route path="/workouts" element={<ProtectedRoute><Workouts data={data.workouts} onAdd={addWorkout} onDeleteLog={deleteWorkoutLog} /></ProtectedRoute>} />
+      <Route path="/diet" element={<ProtectedRoute><Diet data={data.diet} onAdd={addDiet} onDeleteLog={deleteDietLog} /></ProtectedRoute>} />
       <Route path="/photos" element={<ProtectedRoute><Photos data={data.photos} onAdd={addPhoto} onDelete={deletePhoto} /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings settings={data.settings} onUpdate={updateSettings} fullData={data} /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
