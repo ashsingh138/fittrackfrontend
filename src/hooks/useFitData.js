@@ -6,10 +6,10 @@ const API_BASE = import.meta.env.VITE_API_URL;
 const initialData = {
   settings: {
     targetDate: '2025-02-15',
-    targetWeight: 75,
-    targetWaist: 32,
+    targetWeight: 60,
+    targetWaist: 80,
     startWeight: 0,
-    height: 175,
+    height: 170,
   },
   workoutSchedule: {}, // Will load from user profile
   measurements: [],
@@ -181,6 +181,47 @@ export function useFitData() {
     }
   }, []);
 
+  // ... inside useFitData function ...
+
+  // Helper for DELETE requests
+  const deleteData = async (endpoint, date) => {
+    if (!user) return false;
+    try {
+      const res = await fetch(`${API_BASE}/${endpoint}?date=${date}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${user.token}` }
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  };
+
+  // --- ACTIONS ---
+
+  const deleteDietLog = async (date) => {
+    const success = await deleteData('diet', date);
+    if (success) {
+      setData(prev => ({
+        ...prev,
+        diet: prev.diet.filter(d => d.date !== date)
+      }));
+    }
+  };
+
+  const deleteWorkoutLog = async (date) => {
+    const success = await deleteData('workouts', date);
+    if (success) {
+      setData(prev => ({
+        ...prev,
+        workouts: prev.workouts.filter(w => w.date !== date)
+      }));
+    }
+  };
+
+  // ... return statement must include these new functions:
   return { 
     data, 
     loading,
@@ -189,6 +230,8 @@ export function useFitData() {
     addMeasurement, 
     addWorkout, 
     addDiet, 
+    deleteDietLog,    // <--- NEW
+    deleteWorkoutLog, // <--- NEW
     addPhoto, 
     deletePhoto 
   };
