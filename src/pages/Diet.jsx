@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Droplets, Utensils, Save, Calendar, X, Edit2, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Droplets, Utensils, Save, Calendar, X, Edit2, AlertCircle, ArrowLeft } from 'lucide-react';
 
-// --- MEAL SECTION COMPONENT ---
+// --- MEAL SECTION COMPONENT (Now with Edit Capability) ---
 const MealSection = ({ title, items, onAdd, onDelete }) => {
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
@@ -15,11 +15,22 @@ const MealSection = ({ title, items, onAdd, onDelete }) => {
     setUnit('gm');
   };
 
+  // NEW: Moves an item back to the input fields for editing
+  const handleEditItem = (index) => {
+    const item = items[index];
+    setName(item.name);
+    setQty(item.qty);
+    setUnit(item.unit || 'gm');
+    onDelete(index); // Remove from list so it can be re-added
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col h-full">
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">{title}</h3>
       </div>
+      
+      {/* Items List */}
       <div className="flex-1 space-y-2 mb-4 overflow-y-auto max-h-40">
         {items.length === 0 && <p className="text-xs text-gray-400 italic">Nothing added yet</p>}
         {items.map((item, idx) => (
@@ -29,22 +40,45 @@ const MealSection = ({ title, items, onAdd, onDelete }) => {
               <span className="text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-1.5 py-0.5 rounded">
                 {item.qty} {item.unit}
               </span>
-              <button onClick={() => onDelete(idx)} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+              
+              {/* EDIT BUTTON */}
+              <button 
+                onClick={() => handleEditItem(idx)} 
+                className="text-gray-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                title="Edit Item"
+              >
+                <Edit2 size={14}/>
+              </button>
+              
+              {/* DELETE BUTTON */}
+              <button 
+                onClick={() => onDelete(idx)} 
+                className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                title="Remove Item"
+              >
                 <Trash2 size={14}/>
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Input Row */}
       <div className="mt-auto">
         <div className="flex flex-wrap gap-2 items-end">
           <div className="flex-1 min-w-[120px]">
-            <input placeholder="Item name..." className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-2 py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-blue-500"
-              value={name} onChange={e => setName(e.target.value)} />
+            <input placeholder="Item name..." 
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-2 py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-blue-500"
+              value={name} onChange={e => setName(e.target.value)} 
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd()} 
+            />
           </div>
           <div className="w-16">
-            <input placeholder="Qty" type="number" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-2 py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-blue-500"
-              value={qty} onChange={e => setQty(e.target.value)} />
+            <input placeholder="Qty" type="number" 
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-2 py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-blue-500"
+              value={qty} onChange={e => setQty(e.target.value)} 
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+            />
           </div>
           <div className="w-20">
              <select className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-1 py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-blue-500"
@@ -61,7 +95,7 @@ const MealSection = ({ title, items, onAdd, onDelete }) => {
   );
 };
 
-// --- MAIN DIET COMPONENT ---
+// --- MAIN DIET PAGE ---
 export default function Diet({ data, onAdd, onDeleteLog }) {
   const today = new Date().toISOString().split('T')[0];
   const [date, setDate] = useState(today);
@@ -71,9 +105,14 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
 
-  // Sync state when Date changes OR when Data updates
+  // Sync state when Date changes
   useEffect(() => {
-    const existingLog = data.find(d => d.date === date);
+    loadDataForDate(date);
+  }, [date, data]);
+
+  // Helper: Force load data for a specific date
+  const loadDataForDate = (targetDate) => {
+    const existingLog = data.find(d => d.date === targetDate);
     if (existingLog) {
       setMeals({
         breakfast: existingLog.meals?.breakfast || [],
@@ -85,11 +124,12 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
       setEggs(existingLog.eggs || 0);
       setWater(existingLog.water || 0);
     } else {
+      // Clear form if no data exists for this date
       setMeals({ breakfast: [], lunch: [], snacks: [], dinner: [], junk: [] });
       setEggs(0);
       setWater(0);
     }
-  }, [date, data]);
+  };
 
   const addItem = (section, item) => {
     setMeals(prev => ({ ...prev, [section]: [...prev[section], item] }));
@@ -111,7 +151,7 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
   };
 
   const handleDeleteFullLog = async (logDate) => {
-    if (window.confirm("Delete entire log for " + logDate + "?")) {
+    if (window.confirm(`Are you sure you want to delete the entire log for ${logDate}?`)) {
       await onDeleteLog(logDate);
       if (logDate === date) {
          setMeals({ breakfast: [], lunch: [], snacks: [], dinner: [], junk: [] });
@@ -121,24 +161,28 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
     }
   };
 
-  // --- EDIT LOGIC ---
-  const handleEditDate = (logDate) => {
-    setDate(logDate);      // 1. Switch the date picker
-    setIsHistoryOpen(false); // 2. Close modal
-    // 3. The useEffect above will automatically load the data for this date
+  // --- FIXED EDIT LOGIC ---
+  const handleEditHistoryLog = (logDate) => {
+    setDate(logDate);         // 1. Update the date state
+    loadDataForDate(logDate); // 2. FORCE reload the data immediately
+    setIsHistoryOpen(false);  // 3. Close the modal
   };
 
   return (
     <div className="relative pb-20">
       
-      {/* EDIT MODE WARNING BANNER */}
+      {/* EDIT MODE BANNER */}
       {date !== today && (
-        <div className="bg-blue-600 text-white px-4 py-2 rounded-t-xl md:rounded-xl mb-4 flex justify-between items-center shadow-md animate-pulse">
-           <div className="flex items-center gap-2 font-bold text-sm">
-             <Edit2 size={16} /> Editing Log for: {date}
+        <div className="bg-blue-600 text-white px-4 py-3 rounded-xl mb-6 flex justify-between items-center shadow-lg animate-fade-in">
+           <div className="flex items-center gap-2 font-bold">
+             <Edit2 size={18} /> 
+             <span>Editing Log: {date}</span>
            </div>
-           <button onClick={() => setDate(today)} className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded transition-colors">
-             Back to Today
+           <button 
+             onClick={() => setDate(today)} 
+             className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
+           >
+             <ArrowLeft size={14}/> Back to Today
            </button>
         </div>
       )}
@@ -157,7 +201,7 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
         
         <div className="flex items-center gap-3 w-full md:w-auto">
           <input type="date" value={date} onChange={e => setDate(e.target.value)} 
-            className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-green-500"/>
+            className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-green-500 font-medium"/>
           
           <button onClick={() => setIsHistoryOpen(true)} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm">
             <Calendar size={18}/> History
@@ -196,7 +240,7 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
           </button>
       </div>
 
-      {/* --- HISTORY MODAL (Redesigned) --- */}
+      {/* --- HISTORY MODAL --- */}
       {isHistoryOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-900 w-full max-w-xl max-h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
@@ -216,7 +260,7 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
                   return (
                     <div key={logId} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm transition-all hover:shadow-md">
                       
-                      {/* Log Header - Click to Toggle */}
+                      {/* Log Summary */}
                       <div 
                         className="p-4 flex justify-between items-center cursor-pointer bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50"
                         onClick={() => setSelectedLog(selectedLog === logId ? null : logId)}
@@ -228,47 +272,32 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
                         </div>
                       </div>
 
-                      {/* Log Details - Expanded */}
+                      {/* Expanded Details */}
                       {selectedLog === logId && (
-                        <div className="p-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
-                           
-                           {/* Sections with Specific Edit Buttons */}
-                           {[
-                             { label: "Breakfast", data: log.meals?.breakfast },
-                             { label: "Lunch", data: log.meals?.lunch },
-                             { label: "Dinner", data: log.meals?.dinner },
-                             { label: "Snacks", data: log.meals?.snacks },
-                             { label: "Junk", data: log.meals?.junk, color: "text-red-500" }
-                           ].map((section) => (
-                             section.data && section.data.length > 0 && (
-                               <div key={section.label} className="border-b border-gray-100 dark:border-gray-700 pb-2 last:border-0">
-                                 <div className="flex justify-between items-start mb-1">
-                                   <span className={`text-xs font-bold uppercase ${section.color || 'text-gray-500 dark:text-gray-400'}`}>{section.label}</span>
-                                   <button 
-                                     onClick={() => handleEditDate(log.date)}
-                                     className="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1 font-medium"
-                                   >
-                                     <Edit2 size={12}/> Edit
-                                   </button>
-                                 </div>
-                                 <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                                   {section.data.map(i => `${i.name} (${i.qty}${i.unit || ''})`).join(', ')}
-                                 </p>
+                        <div className="p-4 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                           {['breakfast', 'lunch', 'dinner', 'snacks', 'junk'].map(key => {
+                             const items = log.meals?.[key] || [];
+                             if (items.length === 0) return null;
+                             return (
+                               <div key={key} className="text-sm">
+                                 <span className="font-bold uppercase text-xs text-gray-500 dark:text-gray-400">{key}: </span>
+                                 <span className="text-gray-700 dark:text-gray-300">
+                                   {items.map(i => `${i.name} (${i.qty})`).join(', ')}
+                                 </span>
                                </div>
-                             )
-                           ))}
-
-                           {/* Global Actions */}
-                           <div className="pt-2 flex justify-end gap-3">
+                             );
+                           })}
+                           
+                           <div className="pt-2 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-700 mt-2">
                               <button 
-                                onClick={() => handleEditDate(log.date)}
-                                className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg text-sm font-bold"
+                                onClick={() => handleEditHistoryLog(log.date)}
+                                className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40"
                               >
                                 <Edit2 size={16}/> Edit Full Day
                               </button>
                               <button 
                                 onClick={() => handleDeleteFullLog(log.date)}
-                                className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg text-sm font-bold"
+                                className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 dark:hover:bg-red-900/40"
                               >
                                 <Trash2 size={16}/> Delete
                               </button>
