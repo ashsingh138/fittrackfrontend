@@ -1,14 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
-const API_URL = `${import.meta.env.VITE_API_URL}/users`; // Backend URL
+const API_URL = `${import.meta.env.VITE_API_URL}/users`; 
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in by looking for token in localStorage
     const storedUser = localStorage.getItem('fittrack_user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
@@ -16,12 +15,26 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+  // Helper to handle API Responses
+  const handleResponse = async (response) => {
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text); 
+    } catch (err) {
+      // If server returns text/html instead of JSON (like 500 error)
+      throw new Error(text || "Server Error");
+    }
+    
+    if (!response.ok) {
+      // Throw the specific message from backend (e.g., "User already exists")
+      throw new Error(data.message || "Something went wrong");
+    }
+    return data;
+  };
+
   // Register
-  // ... inside AuthProvider
-
   const signup = async (userData) => {
-    console.log("1. Sending Signup Data:", userData);
-
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -29,31 +42,18 @@ export function AuthProvider({ children }) {
         body: JSON.stringify(userData),
       });
 
-      // KEY CHANGE: Read text first, then parse JSON
-      const responseText = await res.text(); 
-      console.log("2. Raw Server Response:", responseText); // <--- CHECK THIS IN CONSOLE
+      const data = await handleResponse(res);
 
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (err) {
-        throw new Error(`Server didn't send JSON! It sent: ${responseText}`);
-      }
-
-      if (!res.ok) throw new Error(data.message || "Registration failed");
-
-      // Save user & token
       localStorage.setItem('fittrack_user', JSON.stringify(data));
       setUser(data);
       return { success: true };
 
     } catch (error) {
-      console.error("Signup Logic Error:", error);
+      console.error("Signup Error:", error.message);
+      // Return the specific error message to be displayed in UI
       return { success: false, message: error.message };
     }
   };
-
-  // ... keep the rest the same
 
   // Login
   const login = async (email, password) => {
@@ -63,32 +63,29 @@ export function AuthProvider({ children }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
 
-      if (!res.ok) throw new Error(data.message);
+      const data = await handleResponse(res);
 
       localStorage.setItem('fittrack_user', JSON.stringify(data));
       setUser(data);
       return { success: true };
     } catch (error) {
+      console.error("Login Error:", error.message);
+      // Return the specific error message to be displayed in UI
       return { success: false, message: error.message };
     }
   };
 
-  // Logout
   const logout = () => {
     localStorage.removeItem('fittrack_user');
     setUser(null);
   };
 
-  // Update Profile (Syncs with DB)
   const updateUser = async (updatedData) => {
-    // Optimistic UI update
     const newUser = { ...user, ...updatedData };
     setUser(newUser);
     localStorage.setItem('fittrack_user', JSON.stringify(newUser));
 
-    // Send to backend
     try {
       await fetch(`${API_URL}/profile`, {
         method: 'PUT',

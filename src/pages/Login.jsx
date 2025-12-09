@@ -1,23 +1,30 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogIn } from 'lucide-react';
+import { LogIn, AlertCircle } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Add loading state
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => { // Make async
     e.preventDefault();
-    const result = login(email, password);
+    setError('');
+    setIsLoading(true);
+
+    const result = await login(email, password); // Await the result
+    
     if (result.success) {
-      navigate('/'); // Go to Dashboard
+      navigate('/'); 
     } else {
+      // Set the error message returned from AuthContext
       setError(result.message);
     }
+    setIsLoading(false);
   };
 
   return (
@@ -29,7 +36,13 @@ export default function Login() {
           <p className="text-gray-500 dark:text-gray-400">Sign in to continue your transformation</p>
         </div>
 
-        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 text-sm">{error}</div>}
+        {/* ERROR WARNING BOX */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 px-4 py-3 rounded-xl mb-6 flex items-start gap-3 text-sm animate-pulse">
+            <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -37,7 +50,7 @@ export default function Login() {
             <input 
               type="email" required 
               className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-3 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-              value={email} onChange={e => setEmail(e.target.value)}
+              value={email} onChange={e => { setEmail(e.target.value); setError(''); }} // Clear error on typing
             />
           </div>
           <div>
@@ -45,12 +58,16 @@ export default function Login() {
             <input 
               type="password" required 
               className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-3 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-              value={password} onChange={e => setPassword(e.target.value)}
+              value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
             />
           </div>
           
-          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
-            <LogIn size={20} /> Sign In
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            {isLoading ? 'Signing In...' : <><LogIn size={20} /> Sign In</>}
           </button>
         </form>
 

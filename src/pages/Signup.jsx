@@ -1,35 +1,31 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, AlertCircle } from 'lucide-react';
 
 export default function Signup() {
   const { signup } = useAuth();
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    age: '',
-    gender: 'Male',
-    location: '',
-    height: '', // cm
-    weight: '', // kg
+    name: '', email: '', password: '', age: '', gender: 'Male', location: '', height: '', weight: ''
   });
-const [error, setError] = useState('');
-  const handleSubmit = async (e) => { // Make async
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => { 
     e.preventDefault();
     setError('');
+    setIsLoading(true);
     
-    // Call signup from AuthContext
     const result = await signup(formData);
     
     if (result.success) {
-      navigate('/'); // Redirect to Dashboard on success
+      navigate('/'); 
     } else {
-      setError(result.message); // Show error from backend (e.g., "User already exists")
+      setError(result.message);
     }
+    setIsLoading(false);
   };
 
   return (
@@ -40,69 +36,32 @@ const [error, setError] = useState('');
           <p className="text-gray-500 dark:text-gray-400">Start your fitness journey today</p>
         </div>
 
+        {/* ERROR WARNING BOX */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 px-4 py-3 rounded-xl mb-6 flex items-start gap-3 text-sm">
+            <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Personal Details */}
-          <div className="grid grid-cols-2 gap-4">
+           {/* ... (Keep your input fields exactly the same as before) ... */}
+           {/* Just verify the Input fields use: onChange={e => { ...; setError(''); }} so typing clears the error */}
+           
+           {/* Example Input Update: */}
+           <div className="grid grid-cols-2 gap-4">
              <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
                 <input type="text" required className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white"
-                 value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                 value={formData.name} onChange={e => { setFormData({...formData, name: e.target.value}); setError('') }} />
              </div>
-             <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Location</label>
-                <input type="text" placeholder="City, Country" className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white"
-                 value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} />
-             </div>
-          </div>
+             {/* ... Repeat setError('') for other inputs ... */}
+           </div>
+           
+           {/* ... Rest of form ... */}
 
-          <div className="grid grid-cols-3 gap-4">
-             <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Age</label>
-                <input type="number" required className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white"
-                 value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} />
-             </div>
-             <div className="col-span-2">
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Gender</label>
-                <select className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white"
-                 value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})}>
-                   <option>Male</option>
-                   <option>Female</option>
-                   <option>Other</option>
-                </select>
-             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-             <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Height (cm)</label>
-                <input type="number" required className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white"
-                 value={formData.height} onChange={e => setFormData({...formData, height: e.target.value})} />
-             </div>
-             <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Weight (kg)</label>
-                <input type="number" required className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white"
-                 value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} />
-             </div>
-          </div>
-
-          {/* Account Credentials */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
-                <input type="email" required className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white"
-                 value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Password</label>
-                <input type="password" required className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 text-gray-900 dark:text-white"
-                 value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
-              </div>
-            </div>
-          </div>
-
-          <button type="submit" className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
-            <UserPlus size={20} /> Create Account
+          <button type="submit" disabled={isLoading} className="w-full mt-6 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
+            {isLoading ? 'Creating Account...' : <><UserPlus size={20} /> Create Account</>}
           </button>
         </form>
 
