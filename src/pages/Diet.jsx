@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Droplets, Utensils, Save, Calendar, X, Edit2 } from 'lucide-react';
 
-// ... (MealSection component remains the same as before) ...
+// --- MEAL SECTION COMPONENT (No Changes Needed) ---
 const MealSection = ({ title, items, onAdd, onDelete }) => {
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
@@ -61,8 +61,7 @@ const MealSection = ({ title, items, onAdd, onDelete }) => {
   );
 };
 
-// --- MAIN COMPONENT ---
-// Add 'onDeleteLog' prop here
+// --- MAIN DIET COMPONENT ---
 export default function Diet({ data, onAdd, onDeleteLog }) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [meals, setMeals] = useState({ breakfast: [], lunch: [], snacks: [], dinner: [], junk: [] });
@@ -71,9 +70,14 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
 
-  // This Effect listens for Date Changes (Edit Logic)
+  // Sync state when Date changes OR when Data updates
   useEffect(() => {
-    const existingLog = data.find(d => d.date === date);
+    loadDataForDate(date);
+  }, [date, data]);
+
+  // Helper to load data into the form
+  const loadDataForDate = (targetDate) => {
+    const existingLog = data.find(d => d.date === targetDate);
     if (existingLog) {
       setMeals({
         breakfast: existingLog.meals?.breakfast || [],
@@ -89,7 +93,7 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
       setEggs(0);
       setWater(0);
     }
-  }, [date, data]);
+  };
 
   const addItem = (section, item) => {
     setMeals(prev => ({ ...prev, [section]: [...prev[section], item] }));
@@ -113,13 +117,19 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
   const handleDeleteFullLog = async (logDate) => {
     if (window.confirm("Are you sure you want to delete the entire log for " + logDate + "?")) {
       await onDeleteLog(logDate);
-      // If we deleted the currently viewed date, reset the form
       if (logDate === date) {
          setMeals({ breakfast: [], lunch: [], snacks: [], dinner: [], junk: [] });
          setEggs(0);
          setWater(0);
       }
     }
+  };
+
+  // NEW: Force load data when clicking "Edit"
+  const handleEditClick = (log) => {
+    setDate(log.date);      // Update the date picker
+    loadDataForDate(log.date); // Manually load data immediately
+    setIsHistoryOpen(false); // Close modal
   };
 
   return (
@@ -192,44 +202,45 @@ export default function Diet({ data, onAdd, onDeleteLog }) {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {data.length === 0 ? <div className="text-center text-gray-500 py-10">No logs found.</div> : (
-                [...data].sort((a,b) => new Date(b.date) - new Date(a.date)).map(log => (
-                  <div key={log.id} className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-blue-500 cursor-pointer transition-all bg-white dark:bg-gray-800 shadow-sm"
-                       onClick={() => setSelectedLog(selectedLog === log.id ? null : log.id)}>
-                    <div className="flex justify-between items-center">
-                      <div className="font-bold text-gray-800 dark:text-gray-200">{log.date}</div>
-                      <div className="flex gap-2 text-xs">
-                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md font-medium">{log.water}L 💧</span>
-                      </div>
-                    </div>
-
-                    {selectedLog === log.id && (
-                      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 text-sm space-y-3">
-                         {/* Details display omitted for brevity, keeping existing code logic */}
-                        <div className="grid grid-cols-2 gap-2 mt-4">
-                          <button 
-                            className="flex items-center justify-center gap-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-bold py-2 rounded border border-blue-200 dark:border-blue-800"
-                            onClick={(e) => {
-                               e.stopPropagation();
-                               setDate(log.date); // Sets the date in the main view
-                               setIsHistoryOpen(false); // Closes modal
-                            }}
-                          >
-                            <Edit2 size={14}/> Edit
-                          </button>
-                          <button 
-                            className="flex items-center justify-center gap-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 font-bold py-2 rounded border border-red-200 dark:border-red-800"
-                            onClick={(e) => {
-                               e.stopPropagation();
-                               handleDeleteFullLog(log.date);
-                            }}
-                          >
-                            <Trash2 size={14}/> Delete Day
-                          </button>
+                [...data].sort((a,b) => new Date(b.date) - new Date(a.date)).map(log => {
+                  // FIX 1: Use _id from MongoDB, fallback to id
+                  const logId = log._id || log.id; 
+                  return (
+                    <div key={logId} className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-blue-500 cursor-pointer transition-all bg-white dark:bg-gray-800 shadow-sm"
+                         onClick={() => setSelectedLog(selectedLog === logId ? null : logId)}>
+                      <div className="flex justify-between items-center">
+                        <div className="font-bold text-gray-800 dark:text-gray-200">{log.date}</div>
+                        <div className="flex gap-2 text-xs">
+                          <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md font-medium">{log.water}L 💧</span>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))
+
+                      {selectedLog === logId && (
+                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 text-sm space-y-3" onClick={e => e.stopPropagation()}>
+                           <div className="grid grid-cols-1 gap-1 text-gray-600 dark:text-gray-400">
+                             {log.meals?.breakfast?.length > 0 && <p>🍳 Breakfast: {log.meals.breakfast.map(i => i.name).join(', ')}</p>}
+                             {log.meals?.lunch?.length > 0 && <p>🥗 Lunch: {log.meals.lunch.map(i => i.name).join(', ')}</p>}
+                           </div>
+
+                          <div className="grid grid-cols-2 gap-2 mt-4">
+                            <button 
+                              className="flex items-center justify-center gap-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-bold py-2 rounded border border-blue-200 dark:border-blue-800"
+                              onClick={() => handleEditClick(log)}
+                            >
+                              <Edit2 size={14}/> Edit
+                            </button>
+                            <button 
+                              className="flex items-center justify-center gap-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 font-bold py-2 rounded border border-red-200 dark:border-red-800"
+                              onClick={() => handleDeleteFullLog(log.date)}
+                            >
+                              <Trash2 size={14}/> Delete Day
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
